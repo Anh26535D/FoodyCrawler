@@ -19,18 +19,18 @@ count = 0
 chrome_options = Options()
 
 with open('links.txt', 'r') as file:
-    with open("foody.json", "a", encoding="utf-8") as outfile:
+    with open("foody_1.json", "a", encoding="utf-8") as outfile:
         for urls in file:
             count += 1
 
             # ae tự đổi chỗ này nhé, file foody.json kia tôi chạy được 500 link rồi
-            if count < 500:
-                continue
+            # if count < 500:
+            #     continue
             
             try:
                 info = []
                 url = urls.replace("https://shopeefood.vn/", "")
-                if count == 500:
+                if count == 10:
                     break
                 url_foody = "https://www.foody.vn/" + url
                 url_shopeefood = "https://shopeefood.vn/" + url
@@ -43,18 +43,41 @@ with open('links.txt', 'r') as file:
 
                 driver.get(url_shopeefood)
                 sleep(random.randint(3, 4))
+                # Lướt xuống cuối trang
+                browser_height = driver.execute_script("return window.innerHeight")
 
-                foods = driver.find_elements(By.CSS_SELECTOR, ".item-restaurant-name")
-                foods = [food.text for food in foods]
+                temp_list = []
+                while True:
+                    # Lướt xuống một khoảng nhỏ
+                    driver.execute_script("window.scrollBy(0, {})".format(browser_height))
+                    
+                    # Kiểm tra xem trình duyệt đã đến cuối trang hay chưa
+                    end_of_page = driver.execute_script(
+                        "return (window.innerHeight + window.pageYOffset) >= document.body.offsetHeight;"
+                    )
+                    
+                    if end_of_page:
+                        # Trình duyệt đã đến cuối trang, thoát khỏi vòng lặp
+                        break
 
-                prices = driver.find_elements(By.CSS_SELECTOR, ".current-price")
-                prices = [price.text for price in prices]
+                    # Thu thập thông tin về món ăn và giá cả
+                    foods = driver.find_elements(By.CSS_SELECTOR, ".item-restaurant-name")
+                    foods = [food.text for food in foods]
 
-                # food_price_pairs = tuple(zip(foods, prices))
-                food_price_pairs = [{"food": food, "price": price} for food, price in zip(foods, prices)]
-                print("food_price_pairs", food_price_pairs)
+                    prices = driver.find_elements(By.CSS_SELECTOR, ".current-price")
+                    prices = [price.text for price in prices]
+
+                    # Lặp qua từng cặp món ăn và giá cả
+                    for food, price in zip(foods, prices):
+                        # Kiểm tra xem món ăn và giá cả đã tồn tại trong danh sách tạm thời chưa
+                        if (food, price) not in temp_list:
+                            # Thêm vào danh sách chính
+                            temp_list.append((food, price))
+                            # Thực hiện xử lý khác (nếu cần)
                 
                 # driver.quit()
+
+                food_price_pairs = [{"food": food, "price": price} for food, price in temp_list]
 
                 driver.get(url_foody)
                 sleep(random.randint(1, 2))
